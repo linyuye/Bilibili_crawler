@@ -1,0 +1,6 @@
+requests
+python-dotenv
+seleniumwire
+selenium
+pytz
+fake-useragent
