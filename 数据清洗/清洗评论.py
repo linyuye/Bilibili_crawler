@@ -1,7 +1,7 @@
 import pandas as pd
 
 # 读取CSV文件
-df = pd.read_csv('comments/用来举报的数据集.csv', dtype={'rpid': str})
+df = pd.read_csv('用来筛选的数据集.csv', dtype={'rpid': str})
 cols_to_check = ['昵称', '时间', '评论']
 oid = 自己修改，爬虫告诉你了
 
