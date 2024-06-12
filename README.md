@@ -1,4 +1,5 @@
 # Bilibili_crawler 基于bilibili懒加载api爬取b站动态，视频等评论区
+可以看csdn详细教程
 基于bilibili懒加载api爬取b站动态，视频等评论区。
 动态评论，视频评论均能爬取。
 必须进行去重，爬取评论有重复的。
