@@ -1,20 +1,20 @@
+from selenium import webdriver
 from seleniumwire import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from requests.packages.urllib3.util.retry import Retry
 import time
 import math
 from urllib.parse import urlparse, parse_qs
 import requests
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
 import csv
 import json
 import pytz
 import datetime
 from fake_useragent import UserAgent
 import random
-
+from requests.adapters import HTTPAdapter
 with open('config.json', 'r', encoding='utf-8') as f:
     config = json.load(f)
     ps = config['ps']
@@ -23,7 +23,12 @@ with open('config.json', 'r', encoding='utf-8') as f:
     file_path_3 = config['file_path_3']
     down = config['down']
     up = config['up']
-
+options = {
+        'ignore_http_methods': ['GET', 'POST'],  # 提取XHR请求，通常为GET或POST。如果你不希望忽略任何方法，可以忽略此选项或设置为空数组
+        'custom_headers': {
+            'X-Requested-With': 'XMLHttpRequest'  # 筛选XHR请求
+        }
+    }
 input_method = input("请选择输入方式：\n 1. 通过文件读取（cookie，oid等等）\n 2. 打开浏览器（强烈建议第一次启动使用2，除非您知道您的cookie，视频/动态oid等等）\n")
 if input_method == '1':
     # 通过文件读取cookie和csrf等内容
@@ -35,38 +40,57 @@ if input_method == '1':
         sessdata = config['sessdata']
         bili_jct = config['bili_jct']
 else:
-    options = {
-        'ignore_http_methods': ['GET', 'POST'],  # 提取XHR请求，通常为GET或POST。如果你不希望忽略任何方法，可以忽略此选项或设置为空数组
-        'custom_headers': {
-            'X-Requested-With': 'XMLHttpRequest'  # 筛选XHR请求
-        }
-    }
-    # 配置Selenium
-    chrome_options = Options()
-    chrome_service = Service("您chrome driver地址，如果您会获取cookie/oid等，不需要使用2功能\\chromedriver.exe")
-    driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
 
-    # 打开目标网页
-    driver.get("填写成您爬取的网站")
-    login_div = driver.find_element(By.XPATH, "//div[contains(@class, 'right-entry__outside') and contains(@class, 'go-login-btn')]")
-    login_div.click()
-    time.sleep(5)
-    # 注意替换下面的选择器以匹配你要自动登录的网站
-    username_input = driver.find_element(By.XPATH, "//input[@placeholder='请输入账号']")
-    password_input = driver.find_element(By.XPATH, "//input[@placeholder='请输入密码']")
-    login_button = driver.find_element(By.XPATH, "//div[contains(@class,'btn_primary') and contains(text(),'登录')]")
-    username_input.send_keys("您的账号")
-    password_input.send_keys("您的密码")
-    # 点击登录按钮
-    time.sleep(1)
-    login_button.click()
-    # 等待几秒确保登录成功
-    driver.implicitly_wait(10)  # 替换为你需要的等待时间
-    # 等待页面加载完成（根据实际情况调整时间或使用更智能的等待方式）
-    time.sleep(10)
-    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    time.sleep(10)
-    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    # 配置Selenium
+
+    chrome_options = webdriver.ChromeOptions()
+    driver = webdriver.Chrome(options=chrome_options)
+
+    print("已经打开浏览器，请耐心等待，模式二运行速度较慢")
+
+    try:
+        # 打开目标网页
+        driver.get("https://www.bilibili.com/video/BV1rz421b7zw/")
+        print("已经打开网页，请耐心等待，模式二运行速度较慢")
+        # 等待直到登录按钮可见
+        login_div = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located(
+                (By.XPATH, "//div[contains(@class, 'right-entry__outside') and contains(@class, 'go-login-btn')]"))
+        )
+        # 点击登录按钮
+        login_div.click()
+
+        # 等待一段时间以确保登录界面加载完全
+        time.sleep(3)
+
+        # 查找用户名输入框并输入用户名
+        username_input = driver.find_element(By.XPATH, "//input[@placeholder='请输入账号']")
+        username_input.send_keys("15621604643")
+        # 查找密码输入框并输入密码
+        password_input = driver.find_element(By.XPATH, "//input[@placeholder='请输入密码']")
+        password_input.send_keys("20041218wzj")
+
+        # 查找登录按钮并点击
+        login_button = driver.find_element(By.XPATH,
+                                           "//div[contains(@class,'btn_primary') and contains(text(),'登录')]")
+        login_button.click()
+
+        # 等待一段时间确保登录成功
+        time.sleep(5)
+
+        print("请点击验证码！")
+
+        time.sleep(5)
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(5)
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+
+
+    except Exception as e:
+        print(
+            f"等待或查找元素时出现异常:，可能是由于网络波动或者加载速度过慢，请您重试，推荐您获取cookie后，更改config.json参数，使用模式一")
+
     # 获取捕获的网络请求
     # 初始化一个变量，用来保存最后一个符合条件的请求
     last_request = None
@@ -87,13 +111,15 @@ else:
         print("type:", type)
         # 从WebDriver中获取所有cookies
         all_cookies = driver.get_cookies()
+
         cookies_dict = {cookie['name']: cookie['value'] for cookie in all_cookies}
         cookies_str = '; '.join([f"{name}={value}" for name, value in cookies_dict.items()])
         # 从cookies中获取bili_jct的值
         bili_jct = cookies_dict.get('bili_jct', '')
-        print("bili_jct:", bili_jct)
+        print("bili_jct（就是jscf）:", bili_jct)
         sessdata = cookies_dict.get('SESSDATA', '')
         print("SESSDATA:", sessdata)
+        print("Cookies:", all_cookies)
         # 打印请求头
         response = last_request.response
     driver.quit()
@@ -149,7 +175,7 @@ with requests.Session() as session:
         if response.status_code == 200:
             json_data = response.json()
             if 'data' in json_data:
-                if 'top_replies' in json_data['data'] and json_data['data']['top_replies'] not in (None, []):  
+                if 'top_replies' in json_data['data'] and json_data['data']['top_replies'] not in (None, []):
                     top_replies = json_data['data']['top_replies']
                     print(f"本次爬取含有置顶评论")
                     for reply in top_replies:
@@ -218,6 +244,8 @@ with requests.Session() as session:
                                         print(f"不含有内容")
                                 else:
                                     print(f"请求错误")
+                else:
+                    print("该视频/动态不含有置顶评论")
     for page in range(down, up + 1):
         for retry in range(MAX_RETRIES):
             try:
@@ -233,6 +261,7 @@ with requests.Session() as session:
                     json_data = response.json()
                     if 'data' in json_data:
                         if 'replies' in json_data['data']:
+
                             for comment in json_data['data']['replies']:
                                 count = comment['rcount']
                                 rpid = str(comment['rpid'])
@@ -300,6 +329,7 @@ with requests.Session() as session:
                                         else:
                                             print(f"获取第{page_pn + 1}页失败。状态码: {response.status_code}")
                                     time.sleep(random.uniform(0.2, 0.3))
+                            print(f"已经成功爬取第{page}页。")
                         else:
                             print(f"在页面 {page} 的JSON响应中缺少 'replies' 键。跳过此页。")
                     else:
