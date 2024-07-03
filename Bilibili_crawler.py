@@ -149,7 +149,7 @@ with requests.Session() as session:
         if response.status_code == 200:
             json_data = response.json()
             if 'data' in json_data:
-                if 'top_replies' in json_data['data']:
+                if 'top_replies' in json_data['data'] and json_data['data']['top_replies'] not in (None, []):  
                     top_replies = json_data['data']['top_replies']
                     print(f"本次爬取含有置顶评论")
                     for reply in top_replies:
