@@ -65,10 +65,10 @@ else:
 
         # 查找用户名输入框并输入用户名
         username_input = driver.find_element(By.XPATH, "//input[@placeholder='请输入账号']")
-        username_input.send_keys("15621604643")
+        username_input.send_keys("")
         # 查找密码输入框并输入密码
         password_input = driver.find_element(By.XPATH, "//input[@placeholder='请输入密码']")
-        password_input.send_keys("20041218wzj")
+        password_input.send_keys("")
 
         # 查找登录按钮并点击
         login_button = driver.find_element(By.XPATH,
