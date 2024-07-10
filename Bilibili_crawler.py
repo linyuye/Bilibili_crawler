@@ -50,7 +50,7 @@ else:
 
     try:
         # 打开目标网页
-        driver.get("https://www.bilibili.com/video/BV1rz421b7zw/")
+        driver.get("https://www.bilibili.com/video/BV1Sb421E7rX/?spm_id_from=333.1007.top_right_bar_window_history.content.click")
         print("已经打开网页，请耐心等待，模式二运行速度较慢")
         # 等待直到登录按钮可见
         login_div = WebDriverWait(driver, 10).until(
@@ -151,199 +151,147 @@ with open(file_path_3, mode='a', newline='', encoding='utf-8-sig') as file:
     writer.writerow(['昵称', '性别', '时间', '点赞', '评论', 'IP属地', '二级评论条数', '等级', 'uid', 'rpid'])
     writer.writerows(all_comments)
 
-with requests.Session() as session:
-    retries = Retry(total=3,  # 最大重试次数，好像没有这个函数
-                    backoff_factor=0.1,  # 间隔时间会乘以这个数
-                    status_forcelist=[500, 502, 503, 504])
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Cookie': cookies_str,
-        'SESSDATA': sessdata,
-        'csrf': bili_jct,
-    }
-    url_long = 'https://api.bilibili.com/x/v2/reply/main'
-    url_reply = 'https://api.bilibili.com/x/v2/reply/reply'
+
+def fetch_comments(session, url, params, headers):
+    response = session.get(url, params=params, headers=headers)
+    if response.status_code == 200:
+        return response.json()
+    return None
+
+
+def process_comment(comment, file_path_1, file_path_3):
+    rpid = str(comment['rpid'])
+    name = comment['member']['uname']
+    sex = comment['member']['sex']
+    ctime = comment['ctime']
+    dt_object = datetime.datetime.fromtimestamp(ctime, datetime.timezone.utc)
+    formatted_time = dt_object.strftime('%Y-%m-%d %H:%M:%S') + ' 北京时间'
+    like = comment['like']
+    message = comment['content']['message'].replace('\n', ',')
+    location = comment['reply_control'].get('location', '未知')
+    location = location.replace('IP属地：', '') if location else location
+    current_level = comment['member']['level_info']['current_level']
+    mid = str(comment['member']['mid'])
+    count = comment['rcount']
+
+    comment_data = [name, sex, formatted_time, like, message, location, count, current_level, mid, rpid]
+
+    write_to_csv(file_path_1, [comment_data])
+    write_to_csv(file_path_3, [comment_data])
+
+    return count, rpid
+
+
+def process_reply(comment, file_path_2, file_path_3):
+    rpid = str(comment['rpid'])
+    name = comment['member']['uname']
+    sex = comment['member']['sex']
+    ctime = comment['ctime']
+    dt_object = datetime.datetime.fromtimestamp(ctime, datetime.timezone.utc)
+    formatted_time = dt_object.strftime('%Y-%m-%d %H:%M:%S') + ' 北京时间'
+    like = comment['like']
+    message = comment['content']['message'].replace('\n', ',')
+    location = comment['reply_control'].get('location', '未知')
+    location = location.replace('IP属地：', '') if location else location
+    current_level = comment['member']['level_info']['current_level']
+    mid = str(comment['member']['mid'])
+    count = 0  # 二级评论没有回复数
+
+    reply_data = [name, sex, formatted_time, like, message, location, count, current_level, mid, rpid]
+
+    write_to_csv(file_path_2, [reply_data])
+    write_to_csv(file_path_3, [reply_data])
+
+
+def write_to_csv(file_path, data):
+    with open(file_path, mode='a', newline='', encoding='utf-8-sig') as file:
+        writer = csv.writer(file)
+        writer.writerows(data)
+
+
+def fetch_replies(session, url_reply, type, oid, ps, rpid, count, headers, file_path_2, file_path_3):
+    if count is None or count <= 0:
+        print(f"评论 {rpid} 没有回复或回复数量异常")
+        return
+    total_pages = math.ceil(int(count) / int(ps)) if count > 0 else 0
+    for page_pn in range(1, total_pages + 1):  # 从1开始,跳过第0页
+        data_2 = {
+            'type': type,
+            'oid': oid,
+            'ps': ps,
+            'pn': str(page_pn),
+            'root': rpid
+        }
+        json_data = fetch_comments(session, url_reply, data_2, headers)
+        if json_data and 'data' in json_data and 'replies' in json_data['data']:
+            if not json_data['data']['replies']:
+                print(f"该页replies为空，没有评论")
+                continue
+            for comment in json_data['data']['replies']:
+                process_reply(comment, file_path_2, file_path_3)
+        time.sleep(random.uniform(0.05, 0.1))
+
+
+def main_scraper(session, headers, url_long, url_reply, type, oid, ps, down, up, file_path_1, file_path_2, file_path_3):
+    # 处理置顶评论
     data = {
-        'next': str(1),
+        'next': '1',
         'type': type,
         'oid': oid,
         'ps': ps,
         'mode': '3'
     }
-    response = session.get(url_long, params=data, headers=headers)
-    if response.status_code == 200:
-        if response.status_code == 200:
-            json_data = response.json()
-            if 'data' in json_data:
-                if 'top_replies' in json_data['data'] and json_data['data']['top_replies'] not in (None, []):
-                    top_replies = json_data['data']['top_replies']
-                    print(f"本次爬取含有置顶评论")
-                    for reply in top_replies:
-                        name = reply['member']['uname']
-                        sex = reply['member']['sex']
-                        ctime = reply['ctime']
-                        dt_object = datetime.datetime.fromtimestamp(ctime, datetime.timezone.utc)
-                        formatted_time = dt_object.strftime('%Y-%m-%d %H:%M:%S') + ' 北京时间'
-                        like = reply['like']
-                        message = reply['content']['message'].replace('\n', ',')
-                        location = reply['reply_control'].get('location', '未知')
-                        location = location.replace('IP属地：', '') if location else location
-                        current_level = reply['member']['level_info']['current_level']
-                        mid = str(reply['member']['mid'])
-                        rpid = str(reply['rpid'])
-                        count = reply['rcount']
-                        all_comments.append([name, sex, formatted_time, like, message, location,count,current_level,mid,rpid])
-                        with open(file_path_1, mode='a', newline='', encoding='utf-8-sig') as file:
-                            writer = csv.writer(file)
-                            writer.writerows(all_comments)
-                        with open(file_path_3, mode='a', newline='', encoding='utf-8-sig') as file:
-                            writer = csv.writer(file)
-                            writer.writerows(all_comments)
-                        all_comments.clear()
-                        if count != 0:
-                            print(f"在置顶评论中, 该条回复下面总共含有{count}个二级评论")
-                            total_pages = math.ceil(int(count) / int(ps)) if count > 0 else 0
-                            for page_pn in range(total_pages):
-                                data_2 = {
-                                    'type': type,
-                                    'oid': oid,
-                                    'ps': ps,
-                                    'pn': str(page_pn),
-                                    'root': rpid
-                                }
-                                response = session.get(url_reply, params=data_2, headers=headers)
-                                if response.status_code == 200:
-                                    print(f"请求置顶评论状态码：200")
-                                    json_data = response.json()
-                                    if 'data' in json_data and 'replies' in json_data['data']:
-                                        if not json_data['data']['replies']:
-                                            print(f"该页replies为空，没有评论")
-                                            continue
-                                        for comment in json_data['data']['replies']:
-                                            rpid = str(comment['rpid'])
-                                            name = comment['member']['uname']
-                                            sex = comment['member']['sex']
-                                            ctime = comment['ctime']
-                                            dt_object = datetime.datetime.fromtimestamp(ctime, datetime.timezone.utc)
-                                            formatted_time = dt_object.strftime('%Y-%m-%d %H:%M:%S') + ' 北京时间'
-                                            like = comment['like']
-                                            message = comment['content']['message'].replace('\n', ',')
-                                            location = comment['reply_control'].get('location', '未知')
-                                            location = location.replace('IP属地：', '') if location else location
-                                            current_level = comment['member']['level_info']['current_level']
-                                            mid = str(comment['member']['mid'])
-                                            all_2_comments.append([name, sex, formatted_time, like, message, location, count,current_level,mid,rpid])
-                                            with open(file_path_2, mode='a', newline='', encoding='utf-8-sig') as file:
-                                                writer = csv.writer(file)
-                                                writer.writerows(all_2_comments)
-                                            with open(file_path_3, mode='a', newline='', encoding='utf-8-sig') as file:
-                                                writer = csv.writer(file)
-                                                writer.writerows(all_2_comments)
-                                            all_2_comments.clear()
-                                    else:
-                                        print(f"不含有内容")
-                                else:
-                                    print(f"请求错误")
-                else:
-                    print("该视频/动态不含有置顶评论")
+    json_data = fetch_comments(session, url_long, data, headers)
+    if json_data and 'data' in json_data:
+        if 'top_replies' in json_data['data'] and json_data['data']['top_replies']:
+            print("本次爬取含有置顶评论")
+            for reply in json_data['data']['top_replies']:
+                count, rpid = process_comment(reply, file_path_1, file_path_3)
+                if count != 0:
+                    print(f"在置顶评论中, 该条回复下面总共含有{count}个二级评论")
+                    fetch_replies(session, url_reply, type, oid, ps, rpid, count, headers, file_path_2, file_path_3)
+        else:
+            print("该视频/动态不含有置顶评论")
+
+    # 处理普通评论
     for page in range(down, up + 1):
-        for retry in range(MAX_RETRIES):
-            try:
-                data = {
-                    'next': str(page),
-                    'type': type,
-                    'oid': oid,
-                    'ps': ps,
-                    'mode': '3'
-                }
-                response = session.get(url_long, params=data, headers=headers)
-                if response.status_code == 200:
-                    json_data = response.json()
-                    if 'data' in json_data:
-                        if 'replies' in json_data['data']:
+        data = {
+            'next': str(page),
+            'type': type,
+            'oid': oid,
+            'ps': ps,
+            'mode': '3'
+        }
+        json_data = fetch_comments(session, url_long, data, headers)
+        if json_data and 'data' in json_data and 'replies' in json_data['data']:
+            for comment in json_data['data']['replies']:
+                count, rpid = process_comment(comment, file_path_1, file_path_3)
+                if count != 0:
+                    print(f"在第{page}页中第{rpid}含有二级评论, 该条回复下面总共含有{count}个二级评论")
+                    fetch_replies(session, url_reply, type, oid, ps, rpid, count, headers, file_path_2, file_path_3)
+            print(f"已经成功爬取第{page}页。")
+        else:
+            print(f"在页面 {page} 的JSON响应中缺少必要的键。跳过此页。")
+        time.sleep(random.uniform(0.1, 0.2))
 
-                            for comment in json_data['data']['replies']:
-                                count = comment['rcount']
-                                rpid = str(comment['rpid'])
-                                name = comment['member']['uname']
-                                sex = comment['member']['sex']
-                                ctime = comment['ctime']
-                                dt_object = datetime.datetime.fromtimestamp(ctime, datetime.timezone.utc)
-                                formatted_time = dt_object.strftime('%Y-%m-%d %H:%M:%S') + ' 北京时间'
-                                like = comment['like']
-                                message = comment['content']['message'].replace('\n', ',')
-                                location = comment['reply_control'].get('location', '未知')
-                                location = location.replace('IP属地：', '') if location else location
-                                current_level = comment['member']['level_info']['current_level']
-                                mid = str(comment['member']['mid'])
-                                all_comments.append([name, sex, formatted_time, like, message, location,count,current_level,mid,rpid])
 
-                                with open(file_path_1, mode='a', newline='', encoding='utf-8-sig') as file:
-                                    writer = csv.writer(file)
-                                    writer.writerows(all_comments)
-                                with open(file_path_3, mode='a', newline='', encoding='utf-8-sig') as file:
-                                    writer = csv.writer(file)
-                                    writer.writerows(all_comments)
-                                all_comments.clear()
-                                if count != 0:
-                                    print(f"在第{page}页中第{rpid}含有二级评论, 该条回复下面总共含有{count}个二级评论")
-                                    total_pages = math.ceil(int(count) / int(ps)) if count > 0 else 0
-                                    for page_pn in range(total_pages):
-                                        data_2 = {
-                                            'type': type,
-                                            'oid': oid,
-                                            'ps': ps,
-                                            'pn': str(page_pn),
-                                            'root': rpid
-                                        }
-                                        if page_pn == 0:
-                                            continue
-                                        response = session.get(url_reply, params=data_2, headers=headers)
-                                        if response.status_code == 200:
-                                            json_data = response.json()
-                                            if 'data' in json_data and 'replies' in json_data['data']:
-                                                if not json_data['data']['replies']:
-                                                    print(f"该页replies为空，没有评论")
-                                                    continue
-                                                for comment in json_data['data']['replies']:
-                                                    rpid = str(comment['rpid'])
-                                                    name = comment['member']['uname']
-                                                    sex = comment['member']['sex']
-                                                    ctime = comment['ctime']
-                                                    dt_object = datetime.datetime.fromtimestamp(ctime,datetime.timezone.utc)
-                                                    formatted_time = dt_object.strftime('%Y-%m-%d %H:%M:%S') + ' 北京时间'
-                                                    like = comment['like']
-                                                    message = comment['content']['message'].replace('\n', ',')
-                                                    location = comment['reply_control'].get('location', '未知')
-                                                    location = location.replace('IP属地：', '') if location else location
-                                                    current_level = comment['member']['level_info']['current_level']
-                                                    mid = str(comment['member']['mid'])
-                                                    all_2_comments.append([name, sex, formatted_time, like, message, location, count,current_level,mid,rpid])
-                                                    with open(file_path_2, mode='a', newline='',encoding='utf-8-sig') as file:
-                                                        writer = csv.writer(file)
-                                                        writer.writerows(all_2_comments)
-                                                    with open(file_path_3, mode='a', newline='',encoding='utf-8-sig') as file:
-                                                        writer = csv.writer(file)
-                                                        writer.writerows(all_2_comments)
-                                                    all_2_comments.clear()
-                                        else:
-                                            print(f"获取第{page_pn + 1}页失败。状态码: {response.status_code}")
-                                    time.sleep(random.uniform(0.2, 0.3))
-                            print(f"已经成功爬取第{page}页。")
-                        else:
-                            print(f"在页面 {page} 的JSON响应中缺少 'replies' 键。跳过此页。")
-                    else:
-                        print(f"在页面 {page} 的JSON响应中缺少 'data' 键。跳过此页。")
-                else:
-                    print(f"获取页面 {page} 失败。状态码: {response.status_code}")
+def run_scraper(cookies_str, sessdata, bili_jct, type, oid, ps, down, up, file_path_1, file_path_2, file_path_3):
+    with requests.Session() as session:
+        retries = Retry(total=3, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
+        session.mount('https://', requests.adapters.HTTPAdapter(max_retries=retries))
 
-                time.sleep(random.uniform(0.2, 0.3))
-                break
-            except requests.exceptions.RequestException as e:
-                print(f"连接失败: {e}")
-                if retry < MAX_RETRIES - 1:
-                    print(f"正在重试（剩余尝试次数：{MAX_RETRIES - retry - 1}）...")
-                    time.sleep(RETRY_INTERVAL)
-                else:
-                    raise
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Cookie': cookies_str,
+            'SESSDATA': sessdata,
+            'csrf': bili_jct,
+        }
+
+        url_long = 'https://api.bilibili.com/x/v2/reply/main'
+        url_reply = 'https://api.bilibili.com/x/v2/reply/reply'
+
+        main_scraper(session, headers, url_long, url_reply, type, oid, ps, down, up, file_path_1, file_path_2,
+                     file_path_3)
+
+run_scraper(cookies_str, sessdata, bili_jct, type, oid, ps, down, up, file_path_1, file_path_2, file_path_3)
 
