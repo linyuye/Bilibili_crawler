@@ -9,14 +9,6 @@ mid = '356113685'
 
 with open('config.json', 'r', encoding='utf-8') as f:
     config = json.load(f)
-    ps = config['ps']
-    file_path_1 = config['file_path_1']
-    file_path_2 = config['file_path_2']
-    file_path_3 = config['file_path_3']
-    down = config['down']
-    up = config['up']
-    oid = config['oid']
-    type = config['type']
     cookies_str = config['cookies_str']
     bili_jct = config['bili_jct']
 # 创建CSV文件并写入表头
