@@ -293,7 +293,7 @@ for oid,type in zip(comment_id_str_list,comment_type_list):
                                                         all_2_comments.clear()
                                             else:
                                                 print(f"获取第{page_pn + 1}页失败。状态码: {response.status_code}")
-                                        time.sleep(random.uniform(1, 2))
+                                        time.sleep(random.uniform(0.5, 1.5))
                                 print(f"已经成功爬取第{page}页。")
                             else:
                                 print(f"在页面 {page} 的JSON响应中缺少 'replies' 键。跳过此页。")
@@ -303,9 +303,7 @@ for oid,type in zip(comment_id_str_list,comment_type_list):
                             break
                     else:
                         print(f"获取页面 {page} 失败。状态码: {response.status_code}")
-
-                    time.sleep(random.uniform(1, 2))
-                    break
+                    page = page + 1
     with open("记录.txt", mode='a', encoding='utf-8') as file:
         text_to_write = f"爬取了{oid}视频/动态\n"
         file.write(text_to_write)
