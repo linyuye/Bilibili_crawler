@@ -1,13 +1,7 @@
 {
   "cookies_str": "填写您的cookie",
-  "sessdata": "cookie中的",
-  "bili_jct": "cookie中的",
-  "oid": "视频/动态的uid",
-  "type": "视频/动态类型",
+  "bili_jct": "填写您的bili_jct",
   "ps": "20",
-  "file_path_1": "comments/test1_1.csv",
-  "file_path_2": "comments/test1_2.csv",
-  "file_path_3": "comments/test1_3.csv",
-  "down": 1,
-  "up": 1
+  "start": 1,
+  "end": 99999
 }
