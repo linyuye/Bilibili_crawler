@@ -10,13 +10,13 @@ mid = 'xxxxxx'
 # 可自定义头
 send_header = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 
-def write_to_csv(filename, data):
+def write_to_csv(filename, data:list):
     with open(filename, mode='a', newline='', encoding='utf-8') as csv_file:
         csv_writer = csv.writer(csv_file)
         csv_writer.writerow(data)
 def extract_basic_info(item):
     basic = item.get('basic', {})
-    return basic.get('comment_id_str', ''),basic.get('comment_type', '')
+    return [basic.get('comment_id_str', ''),basic.get('comment_type', '')]
 
 
     
@@ -56,8 +56,8 @@ with requests.Session() as session:
     # 提取items中的comment_id_str和comment_type
     if 'data' in result and 'items' in result['data']:
         items:list = result.get('data').get('items')
-        ret1,ret2 = map(extract_basic_info, items)
-        write_to_csv(csv_filename,[ret1,ret2])
+        [write_to_csv(csv_filename, extract_basic_info(item)) for item in items]    
+
         
     # 初始化offset
     offset = result.get('data').get('offset', None)
@@ -87,8 +87,8 @@ with requests.Session() as session:
             # 提取items中的comment_id_str和comment_type
             if 'data' in result and 'items' in result['data']:
                 items = result['data']['items']
-                ret1,ret2 = map(extract_basic_info, items)
-                write_to_csv(csv_filename,[ret1,ret2])
+                [write_to_csv(csv_filename, extract_basic_info(item)) for item in items]    
+                
 
             else:
                 print("No items found in response data.\n\n")
