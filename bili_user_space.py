@@ -54,7 +54,7 @@ with requests.Session() as session:
     result = response.json()
 
     # 提取items中的comment_id_str和comment_type
-    if 'data' in result and 'items' in result.get('data'):
+    if 'data' in result and 'items' in result['data']:
         items:list = result.get('data').get('items')
         write_to_csv(csv_filename,map(extract_basic_info, items))
         
@@ -76,7 +76,7 @@ with requests.Session() as session:
             print("the result is:", json.dumps(result, ensure_ascii=False, indent=4))
 
             # 提取新的offset
-            offset = result.get('data').get('offset', None)
+            offset = result['data'].get('offset', None)
             if offset is not None:
                 print(f"Next offset: {offset}\n\n")
             else:
@@ -84,10 +84,9 @@ with requests.Session() as session:
                 break  # 如果没有offset，退出循环
 
             # 提取items中的comment_id_str和comment_type
-            if 'data' in result and 'items' in result.get('data'):
-                items = result.get('data').get('items')
-
-                write_to_csv(csv_filename,list(map(extract_basic_info, items)))
+            if 'data' in result and 'items' in result['data']:
+                items = result['data']['items']
+                write_to_csv(csv_filename,map(extract_basic_info, items))
 
             else:
                 print("No items found in response data.\n\n")
@@ -97,7 +96,7 @@ with requests.Session() as session:
             print(f"An error occurred: {e}\n\n")
             break  # 如果请求失败，退出循环
 
-        if 'data' in result and result.get('data').get('has_more', False):
+        if 'data' in result and result['data'].get('has_more', False):
             time.sleep(random.uniform(0.1, 0.2))
         else:
             exit()
