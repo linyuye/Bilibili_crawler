@@ -21,7 +21,8 @@ pip install -r requirements.txt
 ### 二：填入用户信息
 
 1. 修改json内容，如果您不会获取cookie等内容  
-2. （F12打开开发者工具，刷新视频/动态，等待某个视频/动态加载完全，点击Network选项，向下滑动评论区，直到加载出一个main?oid开头的东西，oid，type，cookie均在这里面）   
+2. （F12打开开发者工具，刷新视频/动态，等待某个视频/动态加载完全，点击Network选项，向下滑动评论区，直到加载出一个main?oid开头的东西，oid，type，cookie均在这里面）
+3. 如果爬虫中断，可以把产生的“记录.csv”放入user文件夹，即可无间断运行
 
 ### 三：使用设置
 - bili_user_space.py中的mid(line8),为你想爬取的用户uid  
