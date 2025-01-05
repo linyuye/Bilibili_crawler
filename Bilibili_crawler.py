@@ -8,6 +8,15 @@ import pytz
 import datetime
 import random
 import os
+import re
+def clean_filename(filename):
+    """
+    清理文件名，将非法字符替换为下划线 _
+    """
+    illegal_chars = r'[\\/:*?"<>|]'
+    cleaned_filename = re.sub(illegal_chars, '_', filename)
+    cleaned_filename_1 = re.sub('\r', '_', cleaned_filename)
+    return cleaned_filename_1
 
 XOR_CODE = 23442827791579
 MASK_CODE = 2251799813685247
@@ -58,6 +67,10 @@ for filename in os.listdir(directory):
                 comment_id_str, comment_type = row
                 comment_id_str_list.append(comment_id_str)
                 comment_type_list.append(int(comment_type))
+
+comment_id_str_list_copy=comment_id_str_list.copy()
+comment_type_list_copy=comment_type_list.copy()
+
 with open('config.json', 'r', encoding='utf-8') as f:
     config = json.load(f)
     ps = config['ps']
@@ -67,6 +80,8 @@ with open('config.json', 'r', encoding='utf-8') as f:
     bili_jct = config['bili_jct']
 i = 1
 for oid,type in zip(comment_id_str_list,comment_type_list):
+    if type == 1:
+        continue
     print(f"第{i}次爬取:")
     i = i + 1
     if type == 1:
@@ -86,9 +101,10 @@ for oid,type in zip(comment_id_str_list,comment_type_list):
             response = session.get(url_inf, params=data, headers=headers)
             data = response.json()
             title = data["data"]["title"]
-            file_path_1 = f"comments/{title}_1.csv"
-            file_path_2 = f"comments/{title}_2.csv"
-            file_path_3 = f"comments/{title}_3.csv"
+            clean_title = clean_filename(title)
+            file_path_1 = f"comments/{clean_title}_1.csv"
+            file_path_2 = f"comments/{clean_title}_2.csv"
+            file_path_3 = f"comments/{clean_title}_3.csv"
 
     else:
         file_path_1 = f"comments/{oid}_1.csv"
@@ -107,12 +123,12 @@ for oid,type in zip(comment_id_str_list,comment_type_list):
     comments_current = []
     comments_current_2 = []
     # 建立csv文件
-    with open(file_path_1, mode='w', newline='', encoding='utf-8-sig') as file:
-        writer = csv.writer(file)
-        writer.writerow(['昵称', '性别', '时间', '点赞', '评论', 'IP属地','等级','uid','rpid'])
-    with open(file_path_2, mode='w', newline='', encoding='utf-8-sig') as file:
-        writer = csv.writer(file)
-        writer.writerow(['昵称', '性别', '时间', '点赞', '评论', 'IP属地','等级','uid','rpid'])
+    # with open(file_path_1, mode='w', newline='', encoding='utf-8-sig') as file:
+    #     writer = csv.writer(file)
+    #     writer.writerow(['昵称', '性别', '时间', '点赞', '评论', 'IP属地','等级','uid','rpid'])
+    # with open(file_path_2, mode='w', newline='', encoding='utf-8-sig') as file:
+    #     writer = csv.writer(file)
+    #     writer.writerow(['昵称', '性别', '时间', '点赞', '评论', 'IP属地','等级','uid','rpid'])
     with open(file_path_3, mode='w', newline='', encoding='utf-8-sig') as file:
         writer = csv.writer(file)
         writer.writerow(['昵称', '性别', '时间', '点赞', '评论', 'IP属地', '等级', 'uid', 'rpid'])
@@ -135,7 +151,7 @@ for oid,type in zip(comment_id_str_list,comment_type_list):
             'ps': ps,
             'mode': '3'
         }
-        response = session.get(url_long, params=data, headers=headers)
+        response = session.get(url_long, params=data, headers=headers, verify=True)
         if response.status_code == 200:
                 json_data = response.json()
                 if 'data' in json_data:
@@ -158,9 +174,9 @@ for oid,type in zip(comment_id_str_list,comment_type_list):
                             rpid = str(reply['rpid'])
                             count = reply['rcount']
                             all_comments.append([name, sex, formatted_time, like, message, location,current_level,mid,rpid])
-                            with open(file_path_1, mode='a', newline='', encoding='utf-8-sig') as file:
-                                writer = csv.writer(file)
-                                writer.writerows(all_comments)
+                            # with open(file_path_1, mode='a', newline='', encoding='utf-8-sig') as file:
+                            #     writer = csv.writer(file)
+                            #     writer.writerows(all_comments)
                             with open(file_path_3, mode='a', newline='', encoding='utf-8-sig') as file:
                                 writer = csv.writer(file)
                                 writer.writerows(all_comments)
@@ -176,7 +192,7 @@ for oid,type in zip(comment_id_str_list,comment_type_list):
                                         'pn': str(page_pn),
                                         'root': rpid
                                     }
-                                    response = session.get(url_reply, params=data_2, headers=headers)
+                                    response = session.get(url_reply, params=data_2, headers=headers, verify=True)
                                     if response.status_code == 200:
                                         print(f"请求置顶评论状态码：200")
                                         json_data = response.json()
@@ -199,9 +215,9 @@ for oid,type in zip(comment_id_str_list,comment_type_list):
                                                 current_level = comment['member']['level_info']['current_level']
                                                 mid = str(comment['member']['mid'])
                                                 all_2_comments.append([name, sex, formatted_time, like, message, location,current_level,mid,rpid])
-                                                with open(file_path_2, mode='a', newline='', encoding='utf-8-sig') as file:
-                                                    writer = csv.writer(file)
-                                                    writer.writerows(all_2_comments)
+                                                # with open(file_path_2, mode='a', newline='', encoding='utf-8-sig') as file:
+                                                #     writer = csv.writer(file)
+                                                #     writer.writerows(all_2_comments)
                                                 with open(file_path_3, mode='a', newline='', encoding='utf-8-sig') as file:
                                                     writer = csv.writer(file)
                                                     writer.writerows(all_2_comments)
@@ -213,97 +229,97 @@ for oid,type in zip(comment_id_str_list,comment_type_list):
                     else:
                         print("该视频/动态不含有置顶评论")
         for page in range(start, end + 1):
-                    data = {
-                        'next': str(page),
-                        'type': type,
-                        'oid': oid,
-                        'ps': ps,
-                        'mode': '3'
-                    }
-                    response = session.get(url_long, params=data, headers=headers)
-                    if response.status_code == 200:
-                        json_data = response.json()
-                        if 'data' in json_data:
-                            if 'replies' in json_data['data'] and json_data['data']['replies']:
-                                print(response.url)
-                                for comment in json_data['data']['replies']:
-                                    count = comment['rcount']
-                                    rpid = str(comment['rpid'])
-                                    name = comment['member']['uname']
-                                    sex = comment['member']['sex']
-                                    ctime = comment['ctime']
-                                    dt_object = datetime.datetime.fromtimestamp(ctime, datetime.timezone.utc)
-                                    formatted_time = dt_object.strftime('%Y-%m-%d %H:%M:%S')
-                                    like = comment['like']
-                                    message = comment['content']['message'].replace('\n', ',')
-                                    location = comment['reply_control'].get('location', '未知')
-                                    location = location.replace('IP属地：', '') if location else location
-                                    current_level = comment['member']['level_info']['current_level']
-                                    mid = str(comment['member']['mid'])
-                                    all_comments.append([name, sex, formatted_time, like, message, location,current_level,mid,rpid])
-
-                                    with open(file_path_1, mode='a', newline='', encoding='utf-8-sig') as file:
-                                        writer = csv.writer(file)
-                                        writer.writerows(all_comments)
-                                    with open(file_path_3, mode='a', newline='', encoding='utf-8-sig') as file:
-                                        writer = csv.writer(file)
-                                        writer.writerows(all_comments)
-                                    all_comments.clear()
-                                    if count != 0:
-                                        print(f"在第{page}页中,回复id为:{rpid}的评论下含有二级评论, 该条回复下面总共含有{count}个二级评论")
-                                        total_pages = math.ceil(float(count) / float(ps)) if count > 0 else 0
-                                        for page_pn in range(1, total_pages + 1):
-                                            data_2 = {
-                                                'type': type,
-                                                'oid': oid,
-                                                'ps': ps,
-                                                'pn': str(page_pn),
-                                                'root': rpid
-                                            }
-                                            if page_pn == 0:
+            data = {
+                'next': str(page),
+                'type': type,
+                'oid': oid,
+                'ps': ps,
+                'mode': '3'
+            }
+            response = session.get(url_long, params=data, headers=headers, verify=True)
+            if response.status_code == 200:
+                json_data = response.json()
+                if 'data' in json_data:
+                    if 'replies' in json_data['data'] and json_data['data']['replies']:
+                        print(response.url)
+                        for comment in json_data['data']['replies']:
+                            count = comment['rcount']
+                            rpid = str(comment['rpid'])
+                            name = comment['member']['uname']
+                            sex = comment['member']['sex']
+                            ctime = comment['ctime']
+                            dt_object = datetime.datetime.fromtimestamp(ctime, datetime.timezone.utc)
+                            formatted_time = dt_object.strftime('%Y-%m-%d %H:%M:%S')
+                            like = comment['like']
+                            message = comment['content']['message'].replace('\n', ',')
+                            location = comment['reply_control'].get('location', '未知')
+                            location = location.replace('IP属地：', '') if location else location
+                            current_level = comment['member']['level_info']['current_level']
+                            mid = str(comment['member']['mid'])
+                            all_comments.append([name, sex, formatted_time, like, message, location,current_level,mid,rpid])
+                            # with open(file_path_1, mode='a', newline='', encoding='utf-8-sig') as file:
+                            #     writer = csv.writer(file)
+                            #     writer.writerows(all_comments)
+                            with open(file_path_3, mode='a', newline='', encoding='utf-8-sig') as file:
+                                writer = csv.writer(file)
+                                writer.writerows(all_comments)
+                            all_comments.clear()
+                            if count != 0:
+                                print(f"在第{page}页中,回复id为:{rpid}的评论下含有二级评论, 该条回复下面总共含有{count}个二级评论")
+                                total_pages = math.ceil(float(count) / float(ps)) if count > 0 else 0
+                                for page_pn in range(1, total_pages + 1):
+                                    data_2 = {
+                                        'type': type,
+                                        'oid': oid,
+                                        'ps': ps,
+                                        'pn': str(page_pn),
+                                        'root': rpid
+                                    }
+                                    if page_pn == 0:
+                                        continue
+                                    response = session.get(url_reply, params=data_2, headers=headers, verify=True)
+                                    if response.status_code == 200:
+                                        json_data = response.json()
+                                        print(response.url)
+                                        if 'data' in json_data and 'replies' in json_data['data']:
+                                            if not json_data['data']['replies']:
+                                                print(f"该页replies为空，没有评论")
                                                 continue
-                                            response = session.get(url_reply, params=data_2, headers=headers)
-                                            if response.status_code == 200:
-                                                json_data = response.json()
-                                                print(response.url)
-                                                if 'data' in json_data and 'replies' in json_data['data']:
-                                                    if not json_data['data']['replies']:
-                                                        print(f"该页replies为空，没有评论")
-                                                        continue
-                                                    for comment in json_data['data']['replies']:
-                                                        rpid = str(comment['rpid'])
-                                                        name = comment['member']['uname']
-                                                        sex = comment['member']['sex']
-                                                        ctime = comment['ctime']
-                                                        dt_object = datetime.datetime.fromtimestamp(ctime,datetime.timezone.utc)
-                                                        formatted_time = dt_object.strftime('%Y-%m-%d %H:%M:%S')
-                                                        like = comment['like']
-                                                        message = comment['content']['message'].replace('\n', ',')
-                                                        location = comment['reply_control'].get('location', '未知')
-                                                        location = location.replace('IP属地：', '') if location else location
-                                                        current_level = comment['member']['level_info']['current_level']
-                                                        mid = str(comment['member']['mid'])
-                                                        all_2_comments.append([name, sex, formatted_time, like, message, location,current_level,mid,rpid])
-                                                        with open(file_path_2, mode='a', newline='',encoding='utf-8-sig') as file:
-                                                            writer = csv.writer(file)
-                                                            writer.writerows(all_2_comments)
-                                                        with open(file_path_3, mode='a', newline='',encoding='utf-8-sig') as file:
-                                                            writer = csv.writer(file)
-                                                            writer.writerows(all_2_comments)
-                                                        all_2_comments.clear()
-                                            else:
-                                                print(f"获取第{page_pn + 1}页失败。状态码: {response.status_code}")
-                                        time.sleep(random.uniform(0.5, 1.5))
-                                print(f"已经成功爬取第{page}页。")
-                            else:
-                                print(f"在页面 {page} 的JSON响应中缺少 'replies' 键。跳过此页。")
-                                break
-                        else:
-                            print(f"在页面 {page} 的JSON响应中缺少 'data' 键。跳过此页。")
-                            break
+                                            for comment in json_data['data']['replies']:
+                                                rpid = str(comment['rpid'])
+                                                name = comment['member']['uname']
+                                                sex = comment['member']['sex']
+                                                ctime = comment['ctime']
+                                                dt_object = datetime.datetime.fromtimestamp(ctime,datetime.timezone.utc)
+                                                formatted_time = dt_object.strftime('%Y-%m-%d %H:%M:%S')
+                                                like = comment['like']
+                                                message = comment['content']['message'].replace('\n', ',')
+                                                location = comment['reply_control'].get('location', '未知')
+                                                location = location.replace('IP属地：', '') if location else location
+                                                current_level = comment['member']['level_info']['current_level']
+                                                mid = str(comment['member']['mid'])
+                                                all_2_comments.append([name, sex, formatted_time, like, message, location,current_level,mid,rpid])
+                                                # with open(file_path_2, mode='a', newline='',encoding='utf-8-sig') as file:
+                                                #     writer = csv.writer(file)
+                                                #     writer.writerows(all_2_comments)
+                                                with open(file_path_3, mode='a', newline='',encoding='utf-8-sig') as file:
+                                                    writer = csv.writer(file)
+                                                    writer.writerows(all_2_comments)
+                                                all_2_comments.clear()
+                                    else:
+                                        print(f"获取第{page_pn + 1}页失败。状态码: {response.status_code}")
+                                time.sleep(random.uniform(0.3, 0.4))
+                        print(f"已经成功爬取第{page}页。")
                     else:
-                        print(f"获取页面 {page} 失败。状态码: {response.status_code}")
-                    page = page + 1
+                        print(f"在页面 {page} 的JSON响应中缺少 'replies' 键。跳过此页。")
+                        break
+                else:
+                    print(f"在页面 {page} 的JSON响应中缺少 'data' 键。跳过此页。")
+                    break
+            else:
+                print(f"获取页面 {page} 失败。状态码: {response.status_code}")
+            page = page + 1
+            time.sleep(random.uniform(0.3, 0.4))
     with open("记录.txt", mode='a', encoding='utf-8') as file:
         if type == 1:
             text_to_write = f"爬取了{oid}视频,类型:{type}\n"
@@ -312,10 +328,10 @@ for oid,type in zip(comment_id_str_list,comment_type_list):
         file.write(text_to_write)
     time.sleep(random.uniform(2, 3))
 
-    del comment_id_str_list[0]
-    del comment_type_list[0]
-    data = [[oid, type] for oid, type in zip(comment_id_str_list, comment_type_list)]
+    del comment_id_str_list_copy[0]
+    del comment_type_list_copy[0]
+    data = [[oid, type] for oid, type in zip(comment_id_str_list_copy, comment_type_list_copy)]
     with open("记录.csv", mode='w', newline='', encoding='utf-8-sig') as file:
         writer = csv.writer(file)
         writer.writerows(data)
-    print("数据已保存，如果爬虫因为意外中断，把该文件放入user中，删除原先csv即可继续运行")
+    print("数据已保存")
