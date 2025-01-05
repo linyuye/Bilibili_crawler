@@ -305,5 +305,17 @@ for oid,type in zip(comment_id_str_list,comment_type_list):
                         print(f"获取页面 {page} 失败。状态码: {response.status_code}")
                     page = page + 1
     with open("记录.txt", mode='a', encoding='utf-8') as file:
-        text_to_write = f"爬取了{oid}视频/动态\n"
+        if type == 1:
+            text_to_write = f"爬取了{oid}视频,类型:{type}\n"
+        else:
+            text_to_write = f"爬取了{oid}动态,类型：{type}\n"
         file.write(text_to_write)
+    time.sleep(random.uniform(2, 3))
+
+    del comment_id_str_list[0]
+    del comment_type_list[0]
+    data = [[oid, type] for oid, type in zip(comment_id_str_list, comment_type_list)]
+    with open("记录.csv", mode='w', newline='', encoding='utf-8-sig') as file:
+        writer = csv.writer(file)
+        writer.writerows(data)
+    print("数据已保存，如果爬虫因为意外中断，把该文件放入user中，删除原先csv即可继续运行")
