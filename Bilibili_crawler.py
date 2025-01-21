@@ -80,8 +80,6 @@ with open('config.json', 'r', encoding='utf-8') as f:
     bili_jct = config['bili_jct']
 i = 1
 for oid,type in zip(comment_id_str_list,comment_type_list):
-    if type == 1:
-        continue
     print(f"第{i}次爬取:")
     i = i + 1
     if type == 1:
