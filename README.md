@@ -28,3 +28,6 @@ pip install -r requirements.txt
 - 运行 bili_user_space.py,之后会再user文件夹中产生一个 uid.csv
 - 运行bili_crawler.py,产生的评论在comments文件夹  
 - 后缀解读：_1为一级评论 _2为二级评论 _3为三级评论  
+
+## License  
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.  
